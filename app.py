@@ -1,102 +1,85 @@
 import json
 import os
-import uuid
+import streamlit as st
 
 DATA_FILE = "crush_data.json"
-DEVICE_FILE = "device_token.txt"
-
-def get_device_id():
-    """Gets or creates a unique ID for this device/installation."""
-    if os.path.exists(DEVICE_FILE):
-        with open(DEVICE_FILE, "r") as f:
-            return f.read().strip()
-    else:
-        device_id = str(uuid.uuid4())
-        with open(DEVICE_FILE, "w") as f:
-            f.write(device_id)
-        return device_id
 
 def load_data():
-    """Loads existing submissions and device bindings from the JSON file."""
+    """Loads existing submissions from the JSON file."""
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return {"device_names": {}, "submissions": []}
+        try:
+            with open(DATA_FILE, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {"submissions": []}
+    return {"submissions": []}
 
 def save_data(data):
     """Saves data back to the JSON file."""
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def main():
-    device_id = get_device_id()
-    data = load_data()
+# Page Configuration
+st.set_page_config(page_title="Crush Matcher", page_icon="💖")
+
+st.title("💖 CRUSH MATCHER 💖")
+st.markdown("---")
+
+# Privacy Notice
+st.info("🔒 **PRIVACY NOTICE:** This program is completely anonymous. The admin cannot see who your crush is or track your identity. Type freely! 🕵️‍♂️✨")
+
+data = load_data()
+
+# Initialize session state to lock the user's name for this browser session
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
+
+# Step 1: Get User's Name
+if not st.session_state.user_name:
+    name_input = st.text_input("What's your name?").strip().lower()
+    if st.button("Lock In Name"):
+        if name_input:
+            st.session_state.user_name = name_input
+            st.rerun()
+        else:
+            st.error("Name cannot be empty.")
+else:
+    # Step 2: User is locked in, show crush input
+    st.success(f"Your name is locked in as: **{st.session_state.user_name.title()}**")
     
-    print("========================================")
-    print("          💖 CRUSH MATCHER 💖           ")
-    print("========================================")
-    print("🔒 PRIVACY NOTICE:")
-    print("This program is completely anonymous.")
-    print("The admin cannot see who your crush is or")
-    print("track your identity. Type freely! 🕵️‍♂️✨\n")
+    crush_input = st.text_input("What's the name of your crush?").strip().lower()
     
-    # Check if this device already registered a name
-    registered_name = data["device_names"].get(device_id)
-    
-    if registered_name:
-        print(f"Welcome back! Your name on this device is locked as: **{registered_name.title()}**")
-        user_name = registered_name
-    else:
-        user_name = input("What's your name? ").strip().lower()
-        if not user_name:
-            print("Error: Name cannot be empty.")
-            return
-        # Lock this name to this device
-        data["device_names"][device_id] = user_name
-        save_data(data)
-        print(f"Success! Name locked for this device: {user_name.title()}\n")
-
-    crush_name = input("What's the name of your crush? ").strip().lower()
-    if not crush_name:
-        print("Error: Crush name cannot be empty.")
-        return
-
-    # Prevent crushing on oneself
-    if user_name == crush_name:
-        print("\nNice try! You can't crush on yourself. 😉")
-        return
-
-    # Check if this exact submission already exists
-    new_sub = {"user": user_name, "crush": crush_name}
-    if new_sub in data["submissions"]:
-        print("\nYou've already entered this crush before!")
-        return
-
-    # Save the new submission
-    data["submissions"].append(new_sub)
-    save_data(data)
-
-    # Check match status logic
-    is_match = False
-    crush_has_used_program = False
-
-    for sub in data["submissions"]:
-        # Check if crush has entered *anyone* into the system
-        if sub["user"] == crush_name:
-            crush_has_used_program = True
-        
-        # Check if it's a mutual match
-        if sub["user"] == crush_name and sub["crush"] == user_name:
-            is_match = True
-            break
-
-    print("-" * 40)
-    if is_match:
-        print("CONGRATS!!! You're a MATCHHHHHH (go confess) 🎉🔥❤️")
-    elif not crush_has_used_program:
-        print("Your crush hasn't used this program yet. Fingers crossed they type your name too... 🤫✨")
-    else:
-        print("Sorry. Not a match :(. 💔")
-
-if __name__ == "__main__":
-    main()
+    if st.button("Submit Crush"):
+        if not crush_input:
+            st.error("Crush name cannot be empty.")
+        elif st.session_state.user_name == crush_input:
+            st.warning("Nice try! You can't crush on yourself. 😉")
+        else:
+            new_sub = {"user": st.session_state.user_name, "crush": crush_input}
+            
+            # Prevent duplicate identical submissions
+            if new_sub in data["submissions"]:
+                st.warning("You've already entered this crush before!")
+            else:
+                data["submissions"].append(new_sub)
+                save_data(data)
+                
+                # Check match status logic
+                is_match = False
+                crush_has_used_program = False
+                
+                for sub in data["submissions"]:
+                    if sub["user"] == crush_input:
+                        crush_has_used_program = True
+                    if sub["user"] == crush_input and sub["crush"] == st.session_state.user_name:
+                        is_match = True
+                        break
+                
+                st.markdown("---")
+                if is_match:
+                    st.balloons()
+                    st.success("CONGRATS!!! You're a MATCHHHHHH (go confess) 🎉🔥❤️")
+                elif not crush_has_used_program:
+                    st.info("Your crush hasn't used this program yet. Fingers crossed they type your name too... 🤫✨")
+                else:
+                    st.error("Sorry. Not a match :(. 💔")
