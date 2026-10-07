@@ -6,20 +6,18 @@ import streamlit as st
 DATA_FILE = "crush_data.json"
 
 def load_data():
-    """Loads existing submissions and device bindings from the JSON file safely."""
+    """Loads existing submissions and account data safely."""
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r") as f:
                 data = json.load(f)
-                # Ensure keys always exist to prevent KeyErrors from old data files
-                if "device_names" not in data:
-                    data["device_names"] = {}
-                if "submissions" not in data:
-                    data["submissions"] = []
+                if "accounts" not in data: data["accounts"] = {}
+                if "device_accounts" not in data: data["device_accounts"] = {}
+                if "submissions" not in data: data["submissions"] = []
                 return data
         except json.JSONDecodeError:
             pass
-    return {"device_names": {}, "submissions": []}
+    return {"accounts": {}, "device_accounts": {}, "submissions": []}
 
 def save_data(data):
     """Saves data back to the JSON file."""
@@ -29,7 +27,7 @@ def save_data(data):
 # Page Configuration
 st.set_page_config(page_title="Crush Matcher", page_icon="💖")
 
-# IMPORTANT: Handle query parameters at the very top before any UI renders
+# Handle persistent device ID via query parameters safely
 if "device_id" not in st.query_params:
     st.query_params["device_id"] = str(uuid.uuid4())
 
@@ -45,41 +43,86 @@ st.info("🔒 **PRIVACY NOTICE:** This program is completely anonymous. The admi
 
 data = load_data()
 
-# Check if this specific device/browser already registered a name
-registered_name = data["device_names"].get(device_id)
-user_name = None
+# Initialize session state for login
+if "logged_in_user" not in st.session_state:
+    st.session_state.logged_in_user = None
 
-if registered_name:
-    st.success(f"Welcome back! Your identity on this device is locked as: **{registered_name.title()}**")
-    user_name = registered_name
-else:
-    st.subheader("👋 Welcome!")
-    st.write("Enter your real name. **Note:** Once locked, this device can only use this name to prevent trolling or impersonation.")
+user_name = st.session_state.logged_in_user
+
+# If not logged in in session state
+if not user_name:
+    bound_user = data["device_accounts"].get(device_id)
     
-    name_input = st.text_input("What's your name?").strip().lower()
-    
-    if st.button("Lock In Name"):
-        if not name_input:
-            st.error("Name cannot be empty.")
-        else:
-            # Check if this name is already taken by ANOTHER device
-            name_already_taken = False
-            for dev, name in data["device_names"].items():
-                if name == name_input and dev != device_id:
-                    name_already_taken = True
-                    break
-            
-            if name_already_taken:
-                st.error("This name is already registered on another device! You cannot impersonate someone else.")
-            else:
-                # Permanently bind this name to this device ID
-                data["device_names"][device_id] = name_input
-                save_data(data)
-                st.success(f"Success! Name locked to this device: {name_input.title()}")
+    if bound_user:
+        # Recognized device: Prompt for PIN to unlock
+        st.subheader(f"Welcome back, {bound_user.title()}! 💕")
+        pin_input = st.text_input("Enter your 4-digit PIN to unlock:", type="password").strip()
+        
+        if st.button("Unlock Account"):
+            if pin_input == data["accounts"].get(bound_user, {}).get("pin"):
+                st.session_state.logged_in_user = bound_user
                 st.rerun()
+            else:
+                st.error("Incorrect PIN! Please try again.")
+    else:
+        # New or cleared device: Choose between Creating an Account or Logging In
+        st.subheader("👋 Welcome to Crush Matcher!")
+        st.write("*Note: Each device can only create **one** account to prevent trolling.*")
+        
+        tab1, tab2 = st.tabs(["Create Account", "Log In Existing Account"])
+        
+        with tab1:
+            with st.form("create_form"):
+                new_name = st.text_input("Choose your name:").strip().lower()
+                new_pin = st.text_input("Choose a 4-digit PIN:", type="password").strip()
+                create_submitted = st.form_submit_button("Create Account")
+                
+                if create_submitted:
+                    if not new_name or not new_pin:
+                        st.error("Name and PIN cannot be empty.")
+                    elif len(new_pin) < 4:
+                        st.error("PIN must be at least 4 digits.")
+                    elif new_name in data["accounts"]:
+                        st.error("This name is already taken! Please log in using the other tab.")
+                    else:
+                        # Register account and bind to this device
+                        data["accounts"][new_name] = {"pin": new_pin}
+                        data["device_accounts"][device_id] = new_name
+                        save_data(data)
+                        st.session_state.logged_in_user = new_name
+                        st.success("Account created successfully!")
+                        st.rerun()
+        
+        with tab2:
+            with st.form("login_form"):
+                login_name = st.text_input("Your name:").strip().lower()
+                login_pin = st.text_input("Your 4-digit PIN:", type="password").strip()
+                login_submitted = st.form_submit_button("Log In")
+                
+                if login_submitted:
+                    if not login_name or not login_pin:
+                        st.error("Name and PIN cannot be empty.")
+                    elif login_name not in data["accounts"]:
+                        st.error("Account not found.")
+                    elif data["accounts"][login_name]["pin"] != login_pin:
+                        st.error("Incorrect PIN.")
+                    else:
+                        # Bind this device to the logged-in account
+                        data["device_accounts"][device_id] = login_name
+                        save_data(data)
+                        st.session_state.logged_in_user = login_name
+                        st.success("Logged in successfully!")
+                        st.rerun()
 
-# If user's name is locked in, show crush input
-if user_name:
+# If logged in, show crush submission screen
+if st.session_state.logged_in_user:
+    user_name = st.session_state.logged_in_user
+    st.success(f"Logged in as: **{user_name.title()}**")
+    
+    if st.button("Log Out"):
+        st.session_state.logged_in_user = None
+        st.rerun()
+        
     st.markdown("---")
     crush_input = st.text_input("What's the name of your crush?").strip().lower()
     
