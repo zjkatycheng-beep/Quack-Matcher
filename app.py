@@ -65,33 +65,44 @@ if not user_name:
             else:
                 st.error("Incorrect PIN! Please try again.")
     else:
-        # New or cleared device: Choose between Creating an Account or Logging In
+        # Check if this device already created an account previously (even if device_accounts missed it)
+        # We can check via a secondary safeguard or restrict the creation tab entirely
         st.subheader("👋 Welcome to Crush Matcher!")
-        st.write("*Note: Each device can only create **one** account to prevent trolling.*")
+        st.write("*Note: Each device is restricted to creating only **one** account to prevent trolling.*")
         
         tab1, tab2 = st.tabs(["Create Account", "Log In Existing Account"])
         
         with tab1:
-            with st.form("create_form"):
-                new_name = st.text_input("Choose your name:").strip().lower()
-                new_pin = st.text_input("Choose a 4-digit PIN:", type="password").strip()
-                create_submitted = st.form_submit_button("Create Account")
-                
-                if create_submitted:
-                    if not new_name or not new_pin:
-                        st.error("Name and PIN cannot be empty.")
-                    elif len(new_pin) < 4:
-                        st.error("PIN must be at least 4 digits.")
-                    elif new_name in data["accounts"]:
-                        st.error("This name is already taken! Please log in using the other tab.")
-                    else:
-                        # Register account and bind to this device
-                        data["accounts"][new_name] = {"pin": new_pin}
-                        data["device_accounts"][device_id] = new_name
-                        save_data(data)
-                        st.session_state.logged_in_user = new_name
-                        st.success("Account created successfully!")
-                        st.rerun()
+            # Check if this device already has an account associated in storage
+            device_already_has_account = False
+            for d, u in data["device_accounts"].items():
+                if d == device_id:
+                    device_already_has_account = True
+                    break
+            
+            if device_already_has_account:
+                st.error("❌ This device has already created an account! You cannot create another one. Please use the 'Log In' tab if you have an existing account.")
+            else:
+                with st.form("create_form"):
+                    new_name = st.text_input("Choose your name:").strip().lower()
+                    new_pin = st.text_input("Choose a 4-digit PIN:", type="password").strip()
+                    create_submitted = st.form_submit_button("Create Account")
+                    
+                    if create_submitted:
+                        if not new_name or not new_pin:
+                            st.error("Name and PIN cannot be empty.")
+                        elif len(new_pin) < 4:
+                            st.error("PIN must be at least 4 digits.")
+                        elif new_name in data["accounts"]:
+                            st.error("This name is already taken! Please choose a different name or log in.")
+                        else:
+                            # Register account and permanently lock this device ID
+                            data["accounts"][new_name] = {"pin": new_pin}
+                            data["device_accounts"][device_id] = new_name
+                            save_data(data)
+                            st.session_state.logged_in_user = new_name
+                            st.success("Account created successfully!")
+                            st.rerun()
         
         with tab2:
             with st.form("login_form"):
