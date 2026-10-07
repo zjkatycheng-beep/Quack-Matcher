@@ -2,8 +2,15 @@ import json
 import os
 import uuid
 import streamlit as st
+from streamlit_cookies_manager import EncryptedCookieManager
 
 DATA_FILE = "crush_data.json"
+
+# Initialize Cookies Manager (change prefix/password to anything secure)
+cookies = EncryptedCookieManager(prefix="crush_matcher_app", password="random-secure-password-string")
+
+if not cookies.ready():
+    st.stop()  # Wait for cookies to load
 
 def load_data():
     """Loads existing submissions and device bindings from the JSON file."""
@@ -31,11 +38,12 @@ st.info("🔒 **PRIVACY NOTICE:** This program is completely anonymous. The admi
 
 data = load_data()
 
-# Assign a persistent unique device ID via URL query parameters so it survives refreshes
-if "device_id" not in st.query_params:
-    st.query_params["device_id"] = str(uuid.uuid4())
+# Check if a device ID cookie already exists, otherwise create one
+if "device_id" not in cookies:
+    cookies["device_id"] = str(uuid.uuid4())
+    cookies.save()
 
-device_id = st.query_params["device_id"]
+device_id = cookies["device_id"]
 
 # Check if this device already registered a name in the database
 registered_name = data["device_names"].get(device_id)
