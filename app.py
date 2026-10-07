@@ -1,18 +1,19 @@
 import json
 import os
+import uuid
 import streamlit as st
 
 DATA_FILE = "crush_data.json"
 
 def load_data():
-    """Loads existing submissions from the JSON file."""
+    """Loads existing submissions and device bindings from the JSON file."""
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r") as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            return {"submissions": []}
-    return {"submissions": []}
+            return {"device_names": {}, "submissions": []}
+    return {"device_names": {}, "submissions": []}
 
 def save_data(data):
     """Saves data back to the JSON file."""
@@ -30,32 +31,44 @@ st.info("🔒 **PRIVACY NOTICE:** This program is completely anonymous. The admi
 
 data = load_data()
 
-# Initialize session state to lock the user's name for this browser session
-if "user_name" not in st.session_state:
-    st.session_state.user_name = ""
+# Assign a persistent unique device ID via URL query parameters so it survives refreshes
+if "device_id" not in st.query_params:
+    st.query_params["device_id"] = str(uuid.uuid4())
 
-# Step 1: Get User's Name
-if not st.session_state.user_name:
+device_id = st.query_params["device_id"]
+
+# Check if this device already registered a name in the database
+registered_name = data["device_names"].get(device_id)
+
+user_name = None
+
+if registered_name:
+    st.success(f"Welcome back! Your name on this device is locked in as: **{registered_name.title()}**")
+    user_name = registered_name
+else:
     name_input = st.text_input("What's your name?").strip().lower()
     if st.button("Lock In Name"):
         if name_input:
-            st.session_state.user_name = name_input
+            # Save the binding to JSON
+            data["device_names"][device_id] = name_input
+            save_data(data)
+            st.success(f"Success! Name locked for this device: {name_input.title()}")
             st.rerun()
         else:
             st.error("Name cannot be empty.")
-else:
-    # Step 2: User is locked in, show crush input
-    st.success(f"Your name is locked in as: **{st.session_state.user_name.title()}**")
-    
+
+# If user's name is locked in, show crush input
+if user_name:
+    st.markdown("---")
     crush_input = st.text_input("What's the name of your crush?").strip().lower()
     
     if st.button("Submit Crush"):
         if not crush_input:
             st.error("Crush name cannot be empty.")
-        elif st.session_state.user_name == crush_input:
+        elif user_name == crush_input:
             st.warning("Nice try! You can't crush on yourself. 😉")
         else:
-            new_sub = {"user": st.session_state.user_name, "crush": crush_input}
+            new_sub = {"user": user_name, "crush": crush_input}
             
             # Prevent duplicate identical submissions
             if new_sub in data["submissions"]:
@@ -71,7 +84,7 @@ else:
                 for sub in data["submissions"]:
                     if sub["user"] == crush_input:
                         crush_has_used_program = True
-                    if sub["user"] == crush_input and sub["crush"] == st.session_state.user_name:
+                    if sub["user"] == crush_input and sub["crush"] == user_name:
                         is_match = True
                         break
                 
