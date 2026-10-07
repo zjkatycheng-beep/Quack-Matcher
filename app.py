@@ -173,35 +173,4 @@ if st.button(">:D"):
     st.session_state.show_secret_prompt = not st.session_state.show_secret_prompt
 
 if st.session_state.show_secret_prompt:
-    secret_text = st.text_input("hi")
-    
-    if secret_text == "zj513907*":
-        st.markdown("---")
-        st.subheader("🕵️‍♂️ SECRET ADMIN DASHBOARD")
-        st.write("All user submissions and active accounts:")
-        
-        # Display all accounts and their device bindings
-        st.markdown("### Registered Accounts")
-        if data["accounts"]:
-            for acc_name in list(data["accounts"].keys()):
-                col1, col2 = st.columns([3, 1])
-                col1.write(f"• **{acc_name.title()}**")
-                if col2.button(f"Kick {acc_name.title()}", key=f"kick_{acc_name}"):
-                    # Remove from accounts
-                    del data["accounts"][acc_name]
-                    # Unbind any device tied to this account
-                    data["device_accounts"] = {d: u for d, u in data["device_accounts"].items() if u != acc_name}
-                    # Remove submissions by this user
-                    data["submissions"] = [s for s in data["submissions"] if s["user"] != acc_name]
-                    save_data(data)
-                    st.success(f"Kicked and deleted account for {acc_name.title()}!")
-                    st.rerun()
-        else:
-            st.info("No accounts registered yet.")
-            
-        st.markdown("### All Submissions (Crushes Listed)")
-        if data["submissions"]:
-            for idx, sub in enumerate(data["submissions"]):
-                st.write(f"{idx+1}. **{sub['user'].title()}** crusted on **{sub['crush'].title()}**")
-        else:
-            st.info("No crush submissions yet.")
+    secret_text =
