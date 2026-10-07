@@ -23,6 +23,14 @@ def save_data(data):
 # Page Configuration
 st.set_page_config(page_title="Crush Matcher", page_icon="💖")
 
+# IMPORTANT: Handle query parameters at the very top before any UI renders
+if "device_id" not in st.query_params:
+    st.query_params["device_id"] = str(uuid.uuid4())
+
+device_id = st.query_params["device_id"]
+if isinstance(device_id, list):
+    device_id = device_id[0]
+
 st.title("💖 CRUSH MATCHER 💖")
 st.markdown("---")
 
@@ -31,36 +39,43 @@ st.info("🔒 **PRIVACY NOTICE:** This program is completely anonymous. The admi
 
 data = load_data()
 
-# Handle persistent device ID via URL query parameters safely
-if "device_id" not in st.query_params:
-    st.query_params["device_id"] = str(uuid.uuid4())
-
-device_id = st.query_params["device_id"]
-if isinstance(device_id, list):
-    device_id = device_id[0]
-
-# Check if this device already registered a name in the database
+# Check if this specific device/browser already registered a name
 registered_name = data["device_names"].get(device_id)
 user_name = None
 
 if registered_name:
-    st.success(f"Welcome back! Your name on this device is locked in as: **{registered_name.title()}**")
+    st.success(f"Welcome back! Your identity on this device is locked as: **{registered_name.title()}**")
     user_name = registered_name
 else:
-    name_input = st.text_input("What's your name?", key="name_input_field").strip().lower()
+    st.subheader("👋 Welcome!")
+    st.write("Enter your real name. **Note:** Once locked, this device can only use this name to prevent trolling or impersonation.")
+    
+    name_input = st.text_input("What's your name?").strip().lower()
+    
     if st.button("Lock In Name"):
-        if name_input:
-            data["device_names"][device_id] = name_input
-            save_data(data)
-            st.success(f"Success! Name locked for this device: {name_input.title()}")
-            st.rerun()
-        else:
+        if not name_input:
             st.error("Name cannot be empty.")
+        else:
+            # Check if this name is already taken by ANOTHER device
+            name_already_taken = False
+            for dev, name in data["device_names"].items():
+                if name == name_input and dev != device_id:
+                    name_already_taken = True
+                    break
+            
+            if name_already_taken:
+                st.error("This name is already registered on another device! You cannot impersonate someone else.")
+            else:
+                # Permanently bind this name to this device ID
+                data["device_names"][device_id] = name_input
+                save_data(data)
+                st.success(f"Success! Name locked to this device: {name_input.title()}")
+                st.rerun()
 
 # If user's name is locked in, show crush input
 if user_name:
     st.markdown("---")
-    crush_input = st.text_input("What's the name of your crush?", key="crush_input_field").strip().lower()
+    crush_input = st.text_input("What's the name of your crush?").strip().lower()
     
     if st.button("Submit Crush"):
         if not crush_input:
