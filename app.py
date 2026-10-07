@@ -6,13 +6,19 @@ import streamlit as st
 DATA_FILE = "crush_data.json"
 
 def load_data():
-    """Loads existing submissions and device bindings from the JSON file."""
+    """Loads existing submissions and device bindings from the JSON file safely."""
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r") as f:
-                return json.load(f)
+                data = json.load(f)
+                # Ensure keys always exist to prevent KeyErrors from old data files
+                if "device_names" not in data:
+                    data["device_names"] = {}
+                if "submissions" not in data:
+                    data["submissions"] = []
+                return data
         except json.JSONDecodeError:
-            return {"device_names": {}, "submissions": []}
+            pass
     return {"device_names": {}, "submissions": []}
 
 def save_data(data):
