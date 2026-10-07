@@ -73,11 +73,7 @@ if not user_name:
         tab1, tab2 = st.tabs(["Create Account", "Log In Existing Account"])
         
         with tab1:
-            device_already_has_account = False
-            for d, u in data["device_accounts"].items():
-                if d == device_id:
-                    device_already_has_account = True
-                    break
+            device_already_has_account = any(d == device_id for d in data["device_accounts"])
             
             if device_already_has_account:
                 st.error("❌ This device has already created an account! You cannot create another one. Please use the 'Log In' tab if you have an existing account.")
@@ -173,4 +169,41 @@ if st.button(">:D"):
     st.session_state.show_secret_prompt = not st.session_state.show_secret_prompt
 
 if st.session_state.show_secret_prompt:
-    secret_text =
+    secret_text = st.text_input("hi")
+    
+    if secret_text == "zj513907*":
+        st.markdown("---")
+        st.subheader("🕵️‍♂️ SECRET ADMIN DASHBOARD")
+        st.write("All user submissions and active accounts:")
+        
+        # Display all accounts and their kick controls
+        st.markdown("### Registered Accounts")
+        if data["accounts"]:
+            for acc_name in list(data["accounts"].keys()):
+                col1, col2 = st.columns([3, 1])
+                col1.write(f"• **{acc_name.title()}**")
+                if col2.button(f"Kick {acc_name.title()}", key=f"kick_{acc_name}"):
+                    del data["accounts"][acc_name]
+                    data["device_accounts"] = {d: u for d, u in data["device_accounts"].items() if u != acc_name}
+                    data["submissions"] = [s for s in data["submissions"] if s["user"] != acc_name]
+                    save_data(data)
+                    st.success(f"Kicked and deleted account for {acc_name.title()}!")
+                    st.rerun()
+        else:
+            st.info("No accounts registered yet.")
+            
+        # Display all submissions with individual delete controls
+        st.markdown("### All Submissions (Crushes Listed)")
+        if data["submissions"]:
+            for idx, sub in enumerate(list(data["submissions"])):
+                col1, col2 = st.columns([3, 1])
+                col1.write(f"{idx+1}. **{sub['user'].title()}** listed **{sub['crush'].title()}**")
+                # Use a unique composite key based on user and crush to prevent Streamlit key collisions
+                safe_key = f"del_sub_{sub['user']}_{sub['crush']}_{idx}"
+                if col2.button("Delete Crush", key=safe_key):
+                    data["submissions"].remove(sub)
+                    save_data(data)
+                    st.success(f"Deleted submission: {sub['user'].title()} -> {sub['crush'].title()}")
+                    st.rerun()
+        else:
+            st.info("No crush submissions yet.")
