@@ -35,11 +35,11 @@ device_id = st.query_params["device_id"]
 if isinstance(device_id, list):
     device_id = device_id[0]
 
-st.title("💖 CRUSH MATCHER 💖")
+st.title("💖 TELLS YOU IF YOUR CRUSH LIKES YOU BACK or not COMPLETELY ANONYMOUSLY! 💖")
 st.markdown("---")
 
 # Privacy Notice
-st.info("🔒 **PRIVACY NOTICE:** This program is completely anonymous. The admin cannot see who your crush is or track your identity. Type freely! 🕵️‍♂️✨")
+st.info("**PRIVACY NOTICE:** This program is completely anonymous. The admin and no one else can see who your crush is or track your identity. Type freely! ✨")
 
 data = load_data()
 
@@ -67,10 +67,10 @@ if not user_name:
             else:
                 st.error("Incorrect PIN! Please try again.")
     else:
-        st.subheader("👋 Welcome to Crush Matcher!")
-        st.write("*Note: Each device is restricted to creating only **one** account to prevent trolling.*")
+        st.subheader("Welcome to Quack Matcher!")
+        st.write("*Note: Each device is restricted to creating only **one** account to prevent trolling/disrruption.*")
         
-        tab1, tab2 = st.tabs(["Create Account", "Log In Existing Account"])
+        tab1, tab2 = st.tabs(["Create Account", "Log In To Existing Account"])
         
         with tab1:
             device_already_has_account = any(d == device_id for d in data["device_accounts"])
@@ -79,7 +79,7 @@ if not user_name:
                 st.error("❌ This device has already created an account! You cannot create another one. Please use the 'Log In' tab if you have an existing account.")
             else:
                 with st.form("create_form"):
-                    new_name = st.text_input("Choose your name:").strip().lower()
+                    new_name = st.text_input("Enter your real name:").strip().lower()
                     new_pin = st.text_input("Choose a 4-digit PIN:", type="password").strip()
                     create_submitted = st.form_submit_button("Create Account")
                     
@@ -128,11 +128,11 @@ if st.session_state.logged_in_user:
         st.rerun()
         
     st.markdown("---")
-    crush_input = st.text_input("What's the name of your crush?").strip().lower()
+    crush_input = st.text_input("What's your crush's name? (If more than one person has the same name, add the first letter of their second name eg. 'Sam S'").strip().lower()
     
-    if st.button("Submit Crush"):
+    if st.button("Submit human name"):
         if not crush_input:
-            st.error("Crush name cannot be empty.")
+            st.error("space cannot be empty.")
         elif user_name == crush_input:
             st.warning("Nice try! You can't crush on yourself. 😉")
         else:
