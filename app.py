@@ -128,7 +128,7 @@ if st.session_state.logged_in_user:
         st.rerun()
         
     st.markdown("---")
-    crush_input = st.text_input("What's your crush's name with the first letter of their second name (eg. 'Sam S')".strip().lower()
+    crush_input = st.text_input("What's your crush's name with the first letter of their second name (eg. 'Sam S')").strip().lower()
     
     if st.button("Submit human name"):
         if not crush_input:
