@@ -79,7 +79,7 @@ if not user_name:
                 st.error("❌ This device has already created an account! You cannot create another one. Please use the 'Log In' tab if you have an existing account.")
             else:
                 with st.form("create_form"):
-                    new_name = st.text_input("Enter your real name:").strip().lower()
+                    new_name = st.text_input("Enter your real first name with the 1st letter of your last name:").strip().lower()
                     new_pin = st.text_input("Choose a 4-digit PIN:", type="password").strip()
                     create_submitted = st.form_submit_button("Create Account")
                     
