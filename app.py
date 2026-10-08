@@ -68,7 +68,7 @@ if not user_name:
                 st.error("Incorrect PIN! Please try again.")
     else:
         st.subheader("Welcome to Quack Matcher!")
-        st.write("*Note: Each device is restricted to creating only **one** account to prevent trolling/disrruption.*")
+        st.write("*Note: Each device is restricted to creating only **one** account to prevent trolling/disruption.*")
         
         tab1, tab2 = st.tabs(["Create Account", "Log In To Existing Account"])
         
