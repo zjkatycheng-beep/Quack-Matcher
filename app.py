@@ -39,7 +39,7 @@ st.title("💖 TELLS YOU IF YOUR CRUSH LIKES YOU BACK or not COMPLETELY ANONYMOU
 st.markdown("---")
 
 # Privacy Notice
-st.info("**PRIVACY NOTICE:** This program is completely anonymous. The admin and no one else can see who your crush is or track your identity. Type freely! ✨")
+st.info("**PRIVACY NOTICE:** This program is completely anonymous. Absolutely NO ONE can see what you type or do. Type freely! ✨")
 
 data = load_data()
 
